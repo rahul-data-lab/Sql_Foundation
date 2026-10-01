@@ -1,0 +1,1729 @@
+/* 
+===============================================================================
+RDBMS HANDS-ON: Creating MySQL Tables (+ Primary, Composite, Foreign Keys)
+Author: Sandeep Patil
+Purpose: Beginner-friendly exercises with solutions, test data, and short notes
+MySQL:   8.0+
+
+READ ME FIRST
+- Each EXERCISE starts with short notes:
+  WHY:      Why do we need this concept
+  WHAT:     What exactly we’re doing
+  SCENARIO: Real-world situation where you’d use it
+- Then comes the SOLUTION (DDL/DML) and quick VALIDATION inserts.
+===============================================================================
+*/
+
+
+############################################################# Absolute Basics #####################################################################
+
+/*
+===============================================================================
+MySQL BASICS — Syntax Demonstration Script
+Author: <Your Name>
+Purpose: To introduce absolute beginners to MySQL syntax before complex topics
+===============================================================================
+
+HOW TO USE:
+- Run this script step-by-step in MySQL CLI, Workbench, or phpMyAdmin.
+- Read the WHY and WHAT in comments.
+- Observe the result of each statement.
+===============================================================================
+*/
+
+
+/* ---------------------------------------------------------------------------
+1. CREATE DATABASE
+WHY: A database is a container for related tables.
+WHAT: CREATE DATABASE creates a new database.
+--------------------------------------------------------------------------- */
+DROP DATABASE IF EXISTS basics_demo; -- Cleanup for re-run
+CREATE DATABASE basics_demo;
+SHOW DATABASES; -- See the new database in the list
+
+
+/* ---------------------------------------------------------------------------
+2. USE DATABASE
+WHY: You must 'enter' the database you want to work with.
+WHAT: USE sets the active database for table creation & queries.
+--------------------------------------------------------------------------- */
+USE basics_demo;
+
+
+/* ---------------------------------------------------------------------------
+3. CREATE TABLE
+WHY: Tables store actual data in rows & columns.
+WHAT: CREATE TABLE defines the structure.
+--------------------------------------------------------------------------- */
+DROP TABLE IF EXISTS students;
+CREATE TABLE students (
+    student_id INT,           -- Integer type
+    first_name VARCHAR(50),   -- Text type (up to 50 characters)
+    last_name VARCHAR(50),
+    email VARCHAR(100)
+);
+SHOW TABLES; -- Should show 'students'
+DESCRIBE students; -- View table structure
+
+
+/* ---------------------------------------------------------------------------
+4. INSERT DATA INTO TABLE
+WHY: INSERT adds rows to a table.
+WHAT: INSERT INTO specifies table & values for each column.
+--------------------------------------------------------------------------- */
+INSERT INTO students (student_id, first_name, last_name, email) VALUES
+(1, 'Asha', 'Singh', 'asha@example.com'),
+(2, 'Rohit', 'Patil', 'rohit@example.com');
+
+SELECT * FROM students; -- View inserted data
+
+
+/* ---------------------------------------------------------------------------
+5. SELECT DATA
+WHY: SELECT retrieves rows from the table.
+WHAT: SELECT column1, column2 FROM table WHERE condition;
+--------------------------------------------------------------------------- */
+-- Select all columns
+SELECT * FROM students;
+
+-- Select specific columns
+SELECT first_name, email FROM students;
+
+-- Select with a filter
+SELECT * FROM students WHERE student_id = 1;
+
+
+/* ---------------------------------------------------------------------------
+6. UPDATE DATA
+WHY: UPDATE modifies existing rows.
+WHAT: UPDATE table SET column=value WHERE condition;
+--------------------------------------------------------------------------- */
+UPDATE students
+SET email = 'asha.new@example.com'
+WHERE student_id = 1;
+
+SELECT * FROM students;
+
+
+/* ---------------------------------------------------------------------------
+7. DELETE DATA
+WHY: DELETE removes rows from a table.
+WHAT: DELETE FROM table WHERE condition;
+--------------------------------------------------------------------------- */
+DELETE FROM students WHERE student_id = 2;
+SELECT * FROM students;
+
+
+/* ---------------------------------------------------------------------------
+8. ALTER TABLE
+WHY: ALTER changes the structure of a table.
+WHAT: ALTER TABLE table_name ADD/MODIFY/DROP column;
+--------------------------------------------------------------------------- */
+-- Add a new column
+ALTER TABLE students ADD COLUMN phone VARCHAR(15);
+
+-- Modify column size
+ALTER TABLE students MODIFY COLUMN phone VARCHAR(20);
+
+-- Rename a column
+ALTER TABLE students CHANGE COLUMN phone contact_number VARCHAR(20);
+
+DESCRIBE students;
+
+
+/* ---------------------------------------------------------------------------
+9. DROP TABLE
+WHY: DROP TABLE permanently deletes the table structure & data.
+WHAT: DROP TABLE table_name;
+--------------------------------------------------------------------------- */
+DROP TABLE students;
+SHOW TABLES; -- Should be empty again
+
+
+/* ---------------------------------------------------------------------------
+10. DROP DATABASE
+WHY: DROP DATABASE removes the database and all its tables.
+WHAT: DROP DATABASE db_name;
+--------------------------------------------------------------------------- */
+DROP DATABASE basics_demo;
+SHOW DATABASES; -- Should not show basics_demo anymore
+
+/*
+===============================================================================
+END OF SCRIPT
+===============================================================================
+*/
+
+
+
+
+############################################# Foundations for Keys ############################################################################
+
+-- Optional sandbox
+-- DROP DATABASE IF EXISTS demo_keys;
+-- CREATE DATABASE demo_keys; USE demo_keys;
+
+-- ============ A) PRIMARY KEY (PK) ============
+-- Why: Uniquely identify each row; needed for reliable lookups/relations.
+-- What: Column(s) that are unique + NOT NULL.
+-- Real-life: National ID → one person, one ID.
+DROP TABLE IF EXISTS students_pk;
+CREATE TABLE students_pk (
+  student_id INT PRIMARY KEY,
+  name VARCHAR(50)
+);
+-- student_id ensures unique student records.
+
+
+-- ============ B) COMPOSITE PRIMARY KEY ============
+-- Why: Sometimes uniqueness needs multiple columns.
+-- What: Two+ columns together form the PK.
+-- Real-life: (FlightNumber + Date) = unique flight day.
+DROP TABLE IF EXISTS enrollments;
+CREATE TABLE enrollments (
+  student_id INT,
+  course_id  INT,
+  PRIMARY KEY (student_id, course_id)
+);
+
+
+-- ============ C) FOREIGN KEY (FK) ============
+-- Why: Enforce parent→child relationships; no orphans.
+-- What: Column in child references parent’s PK.
+-- Real-life: borrowed_books.user_id must exist in users.user_id.
+DROP TABLE IF EXISTS users_fk;
+CREATE TABLE users_fk (
+  user_id INT PRIMARY KEY,
+  name    VARCHAR(50) NOT NULL
+);
+
+DROP TABLE IF EXISTS orders_fk;
+CREATE TABLE orders_fk (
+  order_id INT PRIMARY KEY,
+  user_id  INT,
+  FOREIGN KEY (user_id) REFERENCES users_fk(user_id)
+);
+
+
+-- ============ D) UNIQUE KEY ============
+-- Why: Prevent duplicates in non-PK columns (NULLs allowed).
+-- What: Like PK rules but not “the” primary identifier.
+-- Real-life: One account per email.
+DROP TABLE IF EXISTS users_unique;
+CREATE TABLE users_unique (
+  user_id INT PRIMARY KEY,
+  email   VARCHAR(100) UNIQUE
+);
+
+
+-- ============ E) SURROGATE vs NATURAL KEYS ============
+-- Natural key: real-world identifier (email, ISBN).
+-- Surrogate key: artificial ID (AUTO_INCREMENT).
+DROP TABLE IF EXISTS students_keys;
+CREATE TABLE students_keys (
+    student_id   INT PRIMARY KEY AUTO_INCREMENT, -- Surrogate
+    national_id  CHAR(9) UNIQUE NOT NULL,        -- Natural
+    name         VARCHAR(100) NOT NULL,
+    date_of_birth DATE NOT NULL
+);
+
+DROP TABLE IF EXISTS books_keys;
+CREATE TABLE books_keys (
+    book_id        INT PRIMARY KEY AUTO_INCREMENT, -- Surrogate
+    isbn           CHAR(13) UNIQUE,                -- Natural
+    title          VARCHAR(200) NOT NULL,
+    author         VARCHAR(100) NOT NULL,
+    published_year INT
+);
+
+
+
+########################################### Foundation For Constraints ################################################
+
+/* ===========================================================
+   INTRO (WHAT / WHY / USE-CASE)
+   PRIMARY KEY
+     WHAT: Row’s unique, non-null identifier.
+     WHY: Stable identity for joins.
+     USE-CASE: user_id, task_id.
+
+   FOREIGN KEY
+     WHAT: Child column(s) must match parent key.
+     WHY: No orphan rows; consistent relationships.
+     USE-CASE: tasks.created_by → users.user_id
+     Actions:
+       - ON DELETE NO ACTION / RESTRICT: block delete if children exist.
+       - ON DELETE SET NULL: keep child, null out FK.
+       - ON UPDATE CASCADE: reflect parent key changes to children.
+
+   UNIQUE
+     WHAT: Values must be distinct (NULL allowed; multiple NULLs permitted).
+     WHY: Prevent duplicates of business identifiers.
+     USE-CASE: users.email, (tasks.title, created_by).
+
+   NOT NULL
+     WHAT: Disallow NULLs.
+     WHY: Ensure required data is present.
+     USE-CASE: name, title.
+
+   CHECK (MySQL 8.0.16+)
+     WHAT: Expression must be true.
+     WHY: Enforce business rules at DB level.
+     USE-CASE: LENGTH(title) > 0, estimated_hours > 0, email LIKE '%@%'.
+
+   DEFAULT
+     WHAT: Value auto-filled if not supplied.
+     WHY: Sensible fallbacks.
+     USE-CASE: timestamps, status.
+
+   AUTO_INCREMENT
+     WHAT: Auto-generated integers.
+     WHY: Simple surrogate keys.
+     USE-CASE: user_id, task_id.
+   =========================================================== */
+
+-- Clean slate and predictable behavior
+DROP DATABASE IF EXISTS demo_two_tables;
+CREATE DATABASE demo_two_tables;
+USE demo_two_tables;
+SET sql_mode = 'STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+
+-- STRICT_ALL_TABLES → Rejects invalid or out-of-range data instead of silently adjusting/truncating it.
+-- ERROR_FOR_DIVISION_BY_ZERO → Throws an error when dividing by zero instead of returning 0 or NULL.
+-- NO_ENGINE_SUBSTITUTION → Fails if a specified storage engine isn’t available instead of using a default.
+
+/* ===========================================================
+   TABLE 1: users
+   Shows: PK, UNIQUE, NOT NULL, CHECK, DEFAULT, AUTO_INCREMENT
+   =========================================================== */
+DROP TABLE IF EXISTS users;
+
+-- way 1 : without naming constraints 
+
+CREATE TABLE users01 (
+  user_id     INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(100) NOT NULL,
+  email       VARCHAR(255) NOT NULL UNIQUE,
+  national_id VARCHAR(32) NULL UNIQUE,              -- multiple NULLs allowed
+  status      ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK (email LIKE '%@%')  -- simple format guard
+) ENGINE=InnoDB;
+
+-- Get names of constraints
+SELECT CONSTRAINT_NAME, CONSTRAINT_TYPE
+FROM information_schema.TABLE_CONSTRAINTS
+WHERE TABLE_SCHEMA = 'demo_two_tables'
+  AND TABLE_NAME = 'users01';
+
+
+-- way 2 : naming the constraints
+CREATE TABLE users02 (
+  user_id     INT NOT NULL AUTO_INCREMENT,
+  name        VARCHAR(100) NOT NULL,
+  email       VARCHAR(255) NOT NULL,
+  national_id VARCHAR(32) NULL,                     -- UNIQUE but nullable (multiple NULLs allowed)
+  status      ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT PK_users PRIMARY KEY (user_id),
+  CONSTRAINT UQ_users_email UNIQUE (email),
+  CONSTRAINT UQ_users_national UNIQUE (national_id),
+  CONSTRAINT CK_users_email CHECK (email LIKE '%@%') -- simple format guard
+) ENGINE=InnoDB;
+
+-- GOOD INSERTS (users)
+INSERT INTO users (name, email, national_id) VALUES
+  ('Alice', 'alice@example.com', 'NAT-001'),
+  ('Bob',   'bob@example.com',    NULL),
+  ('Carol', 'carol@example.com', 'NAT-003');
+
+-- QUICK VALIDATIONS (users)
+SELECT 'users rows' AS check_name, COUNT(*) AS rows FROM users;
+SELECT 'distinct emails' AS check_name, COUNT(DISTINCT email) AS distinct_emails FROM users;
+
+-- VIOLATIONS (users) — run one at a time:
+-- 1) UNIQUE(email): duplicate -> should FAIL
+-- INSERT INTO users (name, email) VALUES ('Eve','alice@example.com');
+
+-- 2) CHECK(email): bad format -> should FAIL
+-- INSERT INTO users (name, email) VALUES ('Zed','not-an-email');
+
+-- 3) NOT NULL(name): missing required -> should FAIL
+-- INSERT INTO users (email) VALUES ('no-name@example.com');
+
+-- 4) UNIQUE(national_id): duplicate non-NULL -> should FAIL
+-- INSERT INTO users (name, email, national_id) VALUES ('DupNat','dup@example.com','NAT-001');
+
+
+
+/* ===========================================================
+   TABLE 2: tasks
+   Shows: PK, FK (two styles), UNIQUE composite, NOT NULL, CHECK, DEFAULT
+         - created_by → users.user_id  (ON DELETE NO ACTION/RESTRICT, ON UPDATE CASCADE)
+         - assigned_to → users.user_id (ON DELETE SET NULL,         ON UPDATE CASCADE)
+   =========================================================== */
+DROP TABLE IF EXISTS tasks;
+CREATE TABLE tasks (
+  task_id         INT NOT NULL AUTO_INCREMENT,
+  title           VARCHAR(200) NOT NULL,
+  created_by      INT  NOT NULL,   -- FK to users (strict parent)
+  assigned_to     INT  NULL,       -- FK to users (optional parent)
+  status          ENUM('todo','doing','done') NOT NULL DEFAULT 'todo',
+  estimated_hours INT  NOT NULL DEFAULT 1,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  -- Keys/constraints
+  CONSTRAINT PK_tasks PRIMARY KEY (task_id),
+  CONSTRAINT UQ_tasks_title_creator UNIQUE (title, created_by),           -- composite UNIQUE
+  CONSTRAINT CK_tasks_title_nonempty CHECK (LENGTH(title) > 0),
+  CONSTRAINT CK_tasks_hours_pos      CHECK (estimated_hours > 0),
+  CONSTRAINT FK_tasks_created_by
+    FOREIGN KEY (created_by)
+    REFERENCES users(user_id)
+    ON DELETE NO ACTION              -- behaves like RESTRICT in MySQL
+    ON UPDATE CASCADE,
+  CONSTRAINT FK_tasks_assigned_to
+    FOREIGN KEY (assigned_to)
+    REFERENCES users(user_id)
+    ON DELETE SET NULL               -- keep task, null the assignee if user deleted
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- GOOD INSERTS (tasks)
+-- created_by must exist; assigned_to may be NULL or exist.
+INSERT INTO tasks (title, created_by, assigned_to, status, estimated_hours) VALUES
+  ('Prepare slides',   1, 3, 'todo', 3),  -- Alice creates, assigned to Carol
+  ('Set up projector', 1, 2, 'doing', 1), -- Alice creates, assigned to Bob
+  ('Collect feedback', 2, NULL, 'todo', 2); -- Bob creates, unassigned
+
+-- QUICK VALIDATIONS (tasks)
+SELECT t.task_id, t.title, t.created_by, u1.name AS creator, t.assigned_to, u2.name AS assignee, t.status
+FROM tasks t
+JOIN users u1 ON u1.user_id = t.created_by
+LEFT JOIN users u2 ON u2.user_id = t.assigned_to
+ORDER BY t.task_id;
+
+-- FK ACTION DEMOS (good path):
+
+-- A) ON UPDATE CASCADE: change Bob’s user_id from 2 → 20; both created_by/assigned_to that reference Bob should follow.
+UPDATE users SET user_id = 20 WHERE name = 'Bob';
+SELECT 'after update cascade' AS note;
+SELECT t.task_id, t.title, t.created_by, t.assigned_to FROM tasks ORDER BY task_id;
+
+-- B) ON DELETE SET NULL: delete Carol; any task assigned_to = Carol becomes NULL, tasks remain.
+DELETE FROM users WHERE name = 'Carol';
+SELECT 'after delete set null' AS note;
+SELECT t.task_id, t.title, t.created_by, t.assigned_to FROM tasks ORDER BY task_id;
+
+-- C) ON DELETE NO ACTION/RESTRICT: try to delete Alice (creator of tasks). This should FAIL.
+-- DELETE FROM users WHERE name = 'Alice';  -- <-- VIOLATION (uncomment to see error)
+
+
+-- VIOLATIONS (tasks) — run one at a time:
+
+-- 1) FK: created_by must exist -> should FAIL (no user_id = 9999)
+-- INSERT INTO tasks (title, created_by, assigned_to, status, estimated_hours)
+-- VALUES ('Ghost task', 9999, NULL, 'todo', 1);
+
+-- 2) FK: assigned_to must exist if not NULL -> should FAIL (no user_id = 8888)
+-- INSERT INTO tasks (title, created_by, assigned_to, status, estimated_hours)
+-- VALUES ('Wrong assignee', 1, 8888, 'todo', 1);
+
+-- 3) UNIQUE composite (title, created_by): duplicate pair -> should FAIL
+-- INSERT INTO tasks (title, created_by, assigned_to, status, estimated_hours)
+-- VALUES ('Prepare slides', 1, NULL, 'todo', 2);
+
+-- 4) CHECK(title): empty string not allowed -> should FAIL
+-- INSERT INTO tasks (title, created_by, status, estimated_hours)
+-- VALUES ('', 1, 'todo', 1);
+
+-- 5) CHECK(estimated_hours > 0): zero/negative -> should FAIL
+-- INSERT INTO tasks (title, created_by, status, estimated_hours)
+-- VALUES ('Bad effort', 1, 'todo', 0);
+
+-- 6) ENUM(status): invalid value (STRICT mode) -> should FAIL
+-- INSERT INTO tasks (title, created_by, status, estimated_hours)
+-- VALUES ('Bad status', 1, 'blocked', 1);
+
+-- 7) NOT NULL(created_by): omitted -> should FAIL
+-- INSERT INTO tasks (title, status, estimated_hours)
+-- VALUES ('No creator', 'todo', 1);
+
+
+-- EXTRA sanity checks after demos
+SELECT 'final users' AS note;  SELECT user_id, name, email FROM users ORDER BY user_id;
+SELECT 'final tasks' AS note;  SELECT task_id, title, created_by, assigned_to, status FROM tasks ORDER BY task_id;
+
+
+
+
+
+############################################################### ADD / DROP / ALTER Constraints #########################################
+
+
+/* ----------------------------------------------------------
+   SETUP: create the two tables exactly as you shared
+-----------------------------------------------------------*/
+DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS users;
+
+CREATE TABLE users (
+  user_id     INT NOT NULL AUTO_INCREMENT,
+  name        VARCHAR(100) NOT NULL,
+  email       VARCHAR(255) NOT NULL,
+  national_id VARCHAR(32) NULL,                     -- UNIQUE but nullable (multiple NULLs allowed)
+  status      ENUM('active','inactive') NOT NULL DEFAULT 'active',
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT PK_users PRIMARY KEY (user_id),
+  CONSTRAINT UQ_users_email UNIQUE (email),
+  CONSTRAINT UQ_users_national UNIQUE (national_id),
+  CONSTRAINT CK_users_email CHECK (email LIKE '%@%') -- simple format guard
+) ENGINE=InnoDB;
+
+CREATE TABLE tasks (
+  task_id         INT NOT NULL AUTO_INCREMENT,
+  title           VARCHAR(200) NOT NULL,
+  created_by      INT  NOT NULL,   -- FK to users (strict parent)
+  assigned_to     INT  NULL,       -- FK to users (optional parent)
+  status          ENUM('todo','doing','done') NOT NULL DEFAULT 'todo',
+  estimated_hours INT  NOT NULL DEFAULT 1,
+  created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT PK_tasks PRIMARY KEY (task_id),
+  CONSTRAINT UQ_tasks_title_creator UNIQUE (title, created_by),           -- composite UNIQUE
+  CONSTRAINT CK_tasks_title_nonempty CHECK (LENGTH(title) > 0),
+  CONSTRAINT CK_tasks_hours_pos      CHECK (estimated_hours > 0),
+
+  CONSTRAINT FK_tasks_created_by
+    FOREIGN KEY (created_by)
+    REFERENCES users(user_id)
+    ON DELETE NO ACTION              -- behaves like RESTRICT in MySQL
+    ON UPDATE CASCADE,
+
+  CONSTRAINT FK_tasks_assigned_to
+    FOREIGN KEY (assigned_to)
+    REFERENCES users(user_id)
+    ON DELETE SET NULL               -- keep task, null the assignee if user deleted
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+/* (Optional) seed a little data so FK demos make sense */
+INSERT INTO users (name, email, national_id) VALUES
+  ('Alice', 'alice@example.com', 'NAT-001'),
+  ('Bob',   'bob@example.com',    NULL);
+INSERT INTO tasks (title, created_by, assigned_to) VALUES
+  ('Prepare slides', 1, 2),
+  ('Collect feedback', 2, NULL);
+
+
+/* ==========================================================
+   1) PRIMARY KEY (PK)
+   - Drop PK
+   - Re-add PK (same column)
+   - (Example) Make a COMPOSITE PK (drop old PK first)
+   (Note: PK name is informational; you change by drop+add)
+========================================================== */
+
+-- Drop PK on users
+ALTER TABLE users DROP PRIMARY KEY;
+
+-- Re-add PK on users(user_id)
+ALTER TABLE users
+  ADD CONSTRAINT PK_users PRIMARY KEY (user_id);
+
+-- Change PK on tasks to a composite (task_id, created_by) [DEMO],
+-- then revert back to original single-column PK.
+ALTER TABLE tasks DROP PRIMARY KEY;
+ALTER TABLE tasks
+  ADD CONSTRAINT PK_tasks PRIMARY KEY (task_id, created_by);
+
+-- Revert: back to single-column PK on task_id
+ALTER TABLE tasks DROP PRIMARY KEY;
+ALTER TABLE tasks
+  ADD CONSTRAINT PK_tasks PRIMARY KEY (task_id);
+
+
+/* ==========================================================
+   2) UNIQUE
+   - Add UNIQUE (single & composite)
+   - Drop UNIQUE (DROP INDEX <name>)
+   - Rename UNIQUE (RENAME INDEX)
+========================================================== */
+
+-- Add a composite UNIQUE on users(name, email) just for demo
+ALTER TABLE users
+  ADD CONSTRAINT UQ_users_name_email UNIQUE (name, email);
+
+-- Drop that composite UNIQUE
+ALTER TABLE users
+  DROP INDEX UQ_users_name_email;
+
+-- Rename existing UNIQUE (email) to a clearer name
+ALTER TABLE users
+  RENAME INDEX UQ_users_email TO UQ_users_email_unique;
+
+-- Add UNIQUE on tasks(title) alone (note: existing composite still exists)
+ALTER TABLE tasks
+  ADD CONSTRAINT UQ_tasks_title UNIQUE (title);
+
+-- Drop that single-column UNIQUE
+ALTER TABLE tasks
+  DROP INDEX UQ_tasks_title;
+
+
+/* ==========================================================
+   3) CHECK
+   - Drop CHECK
+   - Add tighter CHECK
+   - Modify CHECK (drop + add)
+   (MySQL 8.0.16+ enforces CHECK)
+========================================================== */
+
+-- Drop email CHECK
+ALTER TABLE users
+  DROP CHECK CK_users_email;
+
+-- Add a stricter email CHECK (very basic still)
+ALTER TABLE users
+  ADD CONSTRAINT CK_users_email_basic CHECK (email LIKE '%@%.%');
+
+-- Modify CHECK on tasks hours: ensure 1 <= estimated_hours <= 100
+ALTER TABLE tasks
+  DROP CHECK CK_tasks_hours_pos;
+
+ALTER TABLE tasks
+  ADD CONSTRAINT CK_tasks_hours_range CHECK (estimated_hours BETWEEN 1 AND 100);
+
+
+/* ==========================================================
+   4) NOT NULL
+   - Make a column NOT NULL / NULL (via MODIFY)
+========================================================== */
+
+-- Allow NULLs in users.name (for demo), then revert to NOT NULL
+ALTER TABLE users
+  MODIFY name VARCHAR(100) NULL;
+
+ALTER TABLE users
+  MODIFY name VARCHAR(100) NOT NULL;
+
+
+/* ==========================================================
+   5) DEFAULT
+   - Set or drop DEFAULT (ALTER COLUMN ... SET/DROP DEFAULT)
+   - Or change DEFAULT via MODIFY
+========================================================== */
+
+-- Change default of users.status to 'inactive'
+ALTER TABLE users
+  ALTER COLUMN status SET DEFAULT 'inactive';
+
+-- Drop default on users.status
+ALTER TABLE users
+  ALTER COLUMN status DROP DEFAULT;
+
+-- Re-establish via MODIFY (also good to demonstrate enum change if needed)
+ALTER TABLE users
+  MODIFY status ENUM('active','inactive') NOT NULL DEFAULT 'active';
+
+-- Change default of tasks.estimated_hours to 2
+ALTER TABLE tasks
+  ALTER COLUMN estimated_hours SET DEFAULT 2;
+
+
+/* ==========================================================
+   6) FOREIGN KEY (FK)
+   - Drop FK
+   - Re-add FK with different ON DELETE/ON UPDATE actions
+   - Rename FK: drop + add with new name
+   (To change actions, always drop + add)
+========================================================== */
+
+-- A) Change tasks.assigned_to FK from SET NULL -> RESTRICT
+ALTER TABLE tasks
+  DROP FOREIGN KEY FK_tasks_assigned_to;
+
+ALTER TABLE tasks
+  ADD CONSTRAINT FK_tasks_assigned_to
+  FOREIGN KEY (assigned_to)
+  REFERENCES users(user_id)
+  ON DELETE RESTRICT
+  ON UPDATE CASCADE;
+
+-- B) Change tasks.created_by FK from NO ACTION -> CASCADE (delete creator deletes tasks)
+ALTER TABLE tasks
+  DROP FOREIGN KEY FK_tasks_created_by;
+
+ALTER TABLE tasks
+  ADD CONSTRAINT FK_tasks_created_by
+  FOREIGN KEY (created_by)
+  REFERENCES users(user_id)
+  ON DELETE CASCADE
+  ON UPDATE CASCADE;
+
+-- C) Rename FK by drop+add with a new name (example: to FK_tasks_creator_strict)
+ALTER TABLE tasks
+  DROP FOREIGN KEY FK_tasks_created_by;
+
+ALTER TABLE tasks
+  ADD CONSTRAINT FK_tasks_creator_strict
+  FOREIGN KEY (created_by)
+  REFERENCES users(user_id)
+  ON DELETE NO ACTION
+  ON UPDATE CASCADE;
+
+
+/* ==========================================================
+   7) MISC (useful related operations)
+   - AUTO_INCREMENT reseed
+   - RENAME INDEX (unique or normal)
+   - Show constraints quickly
+========================================================== */
+
+-- Bump AUTO_INCREMENT start on tasks
+ALTER TABLE tasks AUTO_INCREMENT = 1000;
+
+-- Rename the national_id UNIQUE to a clearer name
+ALTER TABLE users
+  RENAME INDEX UQ_users_national TO UQ_users_national_id;
+
+-- Peek at structure (uncomment in MySQL client)
+-- SHOW CREATE TABLE users\G
+-- SHOW CREATE TABLE tasks\G
+
+############################################################### Foreign Key Options ###########################################
+
+
+/* =============================================================================
+FOREIGN KEY ACTIONS — Hands-on Script (MySQL 8.0+, InnoDB)
+Author: <Your Name>
+Goal: Demonstrate RESTRICT, NO ACTION, CASCADE, SET NULL (and SET DEFAULT note)
+How to use:
+  1) Run section by section.
+  2) Read the comments (WHY/WHAT/EXPECT).
+  3) Uncomment the "EXPECTED TO FAIL" statements to observe real errors.
+============================================================================= */
+
+-- Clean, idempotent playground
+DROP DATABASE IF EXISTS fk_actions_demo;
+CREATE DATABASE fk_actions_demo;
+USE fk_actions_demo;
+
+SET @@foreign_key_checks = 1;
+
+/* =============================================================================
+SECTION A — RESTRICT
+WHY:
+  - Protect child rows: if children exist, you cannot delete or change the parent key.
+WHAT:
+  - Parent: teachers; Child: classes(teacher_id) with ON DELETE/UPDATE RESTRICT
+EXPECT:
+  - Deleting a teacher who has classes -> ERROR.
+  - Updating teacher_id (rare practice) -> ERROR if referenced.
+============================================================================= */
+
+DROP TABLE IF EXISTS classes_restrict;
+DROP TABLE IF EXISTS teachers_restrict;
+
+CREATE TABLE teachers_restrict (
+  teacher_id INT PRIMARY KEY,
+  name       VARCHAR(50) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE classes_restrict (
+  class_id   INT PRIMARY KEY,
+  teacher_id INT,
+  CONSTRAINT fk_classes_teacher_restrict
+    FOREIGN KEY (teacher_id)
+    REFERENCES teachers_restrict(teacher_id)
+    ON DELETE RESTRICT
+    ON UPDATE RESTRICT
+) ENGINE=InnoDB;
+
+-- Seed
+INSERT INTO teachers_restrict VALUES (1, 'Asha'), (2, 'Rahul');
+INSERT INTO classes_restrict VALUES (100, 1), (101, 1), (200, 2);
+
+-- Works: Delete a teacher who has NO classes
+DELETE FROM classes_restrict WHERE class_id = 200;   -- remove class for teacher 2
+DELETE FROM teachers_restrict WHERE teacher_id = 2;  -- OK (no dependent classes)
+
+-- EXPECTED TO FAIL: Cannot delete teacher_id=1 (still referenced by class 100,101)
+-- DELETE FROM teachers_restrict WHERE teacher_id = 1;
+
+-- EXPECTED TO FAIL: Cannot UPDATE teacher_id=1 to 10 (child rows exist)
+-- UPDATE teachers_restrict SET teacher_id = 10 WHERE teacher_id = 1;
+
+-- Works: First remove child rows, then delete parent
+DELETE FROM classes_restrict WHERE teacher_id = 1;
+DELETE FROM teachers_restrict WHERE teacher_id = 1;
+
+
+/* =============================================================================
+SECTION B — NO ACTION (InnoDB treats as RESTRICT)
+WHY:
+  - In MySQL InnoDB, NO ACTION == RESTRICT (immediate check).
+WHAT:
+  - Parent: flights; Child: tickets(flight_id) with NO ACTION
+EXPECT:
+  - Behavior identical to RESTRICT in Section A.
+============================================================================= */
+
+DROP TABLE IF EXISTS tickets_noaction;
+DROP TABLE IF EXISTS flights_noaction;
+
+CREATE TABLE flights_noaction (
+  flight_id INT PRIMARY KEY,
+  route     VARCHAR(50)
+) ENGINE=InnoDB;
+
+CREATE TABLE tickets_noaction (
+  ticket_id INT PRIMARY KEY,
+  flight_id INT,
+  CONSTRAINT fk_tickets_flight_noaction
+    FOREIGN KEY (flight_id)
+    REFERENCES flights_noaction(flight_id)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION
+) ENGINE=InnoDB;
+
+-- Seed
+INSERT INTO flights_noaction VALUES (101, 'PUNE-DEL'), (102, 'DEL-PUNE');
+INSERT INTO tickets_noaction VALUES (1, 101), (2, 101), (3, 102);
+
+-- EXPECTED TO FAIL: Cannot delete flight 101 (tickets exist)
+-- DELETE FROM flights_noaction WHERE flight_id = 101;
+
+-- Works: Remove child rows, then delete parent
+DELETE FROM tickets_noaction WHERE flight_id = 101;
+DELETE FROM flights_noaction WHERE flight_id = 101;
+
+-- EXPECTED TO FAIL: Cannot UPDATE flight_id=102 while tickets exist
+-- UPDATE flights_noaction SET flight_id = 999 WHERE flight_id = 102;
+
+-- Works: Remove child, then update parent key (not common in practice)
+DELETE FROM tickets_noaction WHERE flight_id = 102;
+UPDATE flights_noaction SET flight_id = 999 WHERE flight_id = 102;
+
+
+/* =============================================================================
+SECTION C — CASCADE
+WHY:
+  - Dependent data should follow parent changes:
+    - ON DELETE CASCADE: deleting parent deletes children automatically.
+    - ON UPDATE CASCADE: changing parent key updates child key.
+WHAT:
+  - Parent: orders; Child: order_items(order_id) with CASCADE
+EXPECT:
+  - Delete an order -> its items auto-delete.
+  - Update order_id -> child FKs auto-update (shown for teaching; rare in prod).
+============================================================================= */
+
+DROP TABLE IF EXISTS order_items_cascade;
+DROP TABLE IF EXISTS orders_cascade;
+
+CREATE TABLE orders_cascade (
+  order_id INT PRIMARY KEY,
+  note     VARCHAR(100)
+) ENGINE=InnoDB;
+
+CREATE TABLE order_items_cascade (
+  item_id  INT PRIMARY KEY,
+  order_id INT,
+  product  VARCHAR(50),
+  qty      INT NOT NULL CHECK (qty > 0),
+  CONSTRAINT fk_items_order_cascade
+    FOREIGN KEY (order_id)
+    REFERENCES orders_cascade(order_id)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- Seed
+INSERT INTO orders_cascade VALUES (500, 'First order'), (600, 'Second order');
+INSERT INTO order_items_cascade VALUES
+  (1, 500, 'Phone', 1),
+  (2, 500, 'Case',  2),
+  (3, 600, 'Laptop',1);
+
+-- Check child rows exist
+SELECT * FROM order_items_cascade WHERE order_id = 500;
+
+-- ON UPDATE CASCADE demonstration (rare but illustrative)
+UPDATE orders_cascade SET order_id = 550 WHERE order_id = 500;
+-- Order items should now reference 550, not 500
+SELECT * FROM order_items_cascade WHERE order_id IN (500, 550);
+
+-- ON DELETE CASCADE demonstration
+DELETE FROM orders_cascade WHERE order_id = 550; -- deletes items (1,2) automatically
+SELECT * FROM order_items_cascade;               -- item 3 remains (order 600)
+
+/* =============================================================================
+SECTION D — SET NULL
+WHY:
+  - Child records can outlive parent; we simply "detach" them by setting FK to NULL.
+WHAT:
+  - Parent: managers; Child: employees(manager_id) with ON DELETE SET NULL
+EXPECT:
+  - Delete a manager -> employees.manager_id becomes NULL (column must allow NULL).
+============================================================================= */
+
+DROP TABLE IF EXISTS employees_setnull;
+DROP TABLE IF EXISTS managers_setnull;
+
+CREATE TABLE managers_setnull (
+  manager_id INT PRIMARY KEY,
+  name       VARCHAR(50) NOT NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE employees_setnull (
+  emp_id     INT PRIMARY KEY,
+  emp_name   VARCHAR(50) NOT NULL,
+  manager_id INT NULL,
+  CONSTRAINT fk_emp_mgr_setnull
+    FOREIGN KEY (manager_id)
+    REFERENCES managers_setnull(manager_id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- Seed
+INSERT INTO managers_setnull VALUES (10, 'Meera'), (20, 'Kamal');
+INSERT INTO employees_setnull VALUES
+  (1001, 'Asha', 10),
+  (1002, 'Rohit',10),
+  (1003, 'Neha', 20),
+  (1004, 'Vik',  NULL);
+
+-- Delete manager 10 -> employees 1001/1002 will have manager_id = NULL
+DELETE FROM managers_setnull WHERE manager_id = 10;
+SELECT * FROM employees_setnull ORDER BY emp_id;
+
+--  EXPECTED TO FAIL: If manager_id were NOT NULL, SET NULL would fail
+-- (To test, recreate employees_setnull with manager_id NOT NULL and try again)
+
+/* =============================================================================
+SECTION E — SET DEFAULT (Not supported in MySQL)
+WHY:
+  - Some DBs let you set child FK to its DEFAULT on parent delete (e.g., PostgreSQL).
+  - MySQL DOES NOT support ON DELETE/UPDATE SET DEFAULT. Use triggers or app logic.
+WHAT:
+  - Show the error you’d get, then demonstrate a trigger-based workaround.
+============================================================================= */
+
+-- Attempting SET DEFAULT -> syntax error in MySQL (uncomment to see)
+-- CREATE TABLE parent_default (
+--   id INT PRIMARY KEY
+-- ) ENGINE=InnoDB;
+-- CREATE TABLE child_default (
+--   id INT PRIMARY KEY,
+--   parent_id INT DEFAULT 1,
+--   CONSTRAINT fk_child_parent_default
+--     FOREIGN KEY (parent_id)
+--     REFERENCES parent_default(id)
+--     ON DELETE SET DEFAULT  --  MySQL: not supported
+-- ) ENGINE=InnoDB;
+
+-- Workaround demo: emulate SET DEFAULT with a trigger
+DROP TABLE IF EXISTS child_default_trg;
+DROP TABLE IF EXISTS parent_default_trg;
+
+CREATE TABLE parent_default_trg (
+  id INT PRIMARY KEY
+) ENGINE=InnoDB;
+
+CREATE TABLE child_default_trg (
+  id INT PRIMARY KEY,
+  parent_id INT NOT NULL DEFAULT 1,
+  -- Note: We keep a normal FK (RESTRICT) and handle defaulting via trigger on delete
+  CONSTRAINT fk_child_parent_trg
+    FOREIGN KEY (parent_id)
+    REFERENCES parent_default_trg(id)
+    ON DELETE RESTRICT ON UPDATE RESTRICT
+) ENGINE=InnoDB;
+
+-- Seed parents (ensure DEFAULT target row exists)
+INSERT INTO parent_default_trg VALUES (1), (2), (3);
+
+-- Seed children
+INSERT INTO child_default_trg VALUES (101, 2), (102, 3), (103, 1);
+
+-- Create trigger to emulate "SET DEFAULT to 1" when deleting parent
+DROP TRIGGER IF EXISTS trg_parent_delete_set_default;
+DELIMITER $$
+CREATE TRIGGER trg_parent_delete_set_default
+BEFORE DELETE ON parent_default_trg
+FOR EACH ROW
+BEGIN
+  -- Emulate: any child referencing OLD.id will be set to DEFAULT (1)
+  UPDATE child_default_trg
+     SET parent_id = 1
+   WHERE parent_id = OLD.id;
+END$$
+DELIMITER ;
+
+-- Emulated behavior: delete parent id=2 -> children with parent_id=2 become 1
+DELETE FROM parent_default_trg WHERE id = 2;
+SELECT * FROM child_default_trg ORDER BY id;
+
+-- Note:
+--  - This is a simplified demonstration.
+--  - In production, ensure parent_id=1 always exists, handle cycles/locks carefully.
+
+/* =============================================================================
+SECTION F — Quick Recap Queries
+============================================================================= */
+
+-- Show constraint names created by MySQL for reference
+SHOW CREATE TABLE classes_restrict\G
+SHOW CREATE TABLE tickets_noaction\G
+SHOW CREATE TABLE order_items_cascade\G
+SHOW CREATE TABLE employees_setnull\G
+SHOW CREATE TABLE child_default_trg\G
+
+/* =============================================================================
+END — Key Takeaways (teacher notes)
+- RESTRICT / NO ACTION (InnoDB): block parent change/remove if children exist.
+- CASCADE: child rows update/delete automatically with parent.
+- SET NULL: detach child by nullifying FK (column must be NULLable).
+- SET DEFAULT: not supported; emulate via triggers or app logic.
+- Always use InnoDB, matching types/lengths/order, and named constraints where possible.
+============================================================================= */
+
+
+
+####################################################################### Step Up : Keys/ Constraints ##########################################################
+
+-- ----------------------------------------------------------------------------
+-- SECTION 0: Setup (idempotent)
+-- ----------------------------------------------------------------------------
+DROP DATABASE IF EXISTS rdbms_keys_demo;
+CREATE DATABASE rdbms_keys_demo;
+USE rdbms_keys_demo;
+
+-- Clean slate if re-run individually
+DROP TABLE IF EXISTS exam_results;
+DROP TABLE IF EXISTS assignments;
+DROP TABLE IF EXISTS course_enrollment;
+DROP TABLE IF EXISTS courses;
+DROP TABLE IF EXISTS students;
+
+-- =============================================================================
+-- EXERCISE 1 – Basic Table with Primary Key + UNIQUE
+-- =============================================================================
+/*
+WHY:
+- A PRIMARY KEY uniquely identifies each row and prevents duplicates.
+- UNIQUE ensures no two rows share the same value in that column (e.g., email).
+
+WHAT:
+- Create table 'students' with student_id as PRIMARY KEY and email as UNIQUE.
+
+SCENARIO:
+- Student management: each student must have a unique roll number (PK) and
+  unique email (UNIQUE) to avoid duplicate accounts.
+
+GOTCHA:
+- PRIMARY KEY implies NOT NULL automatically.
+*/
+
+-- SOLUTION
+CREATE TABLE students (
+  student_id INT PRIMARY KEY,
+  first_name VARCHAR(50),
+  last_name  VARCHAR(50),
+  email      VARCHAR(100) UNIQUE
+) ENGINE=InnoDB;
+
+-- VALIDATION (success inserts)
+INSERT INTO students (student_id, first_name, last_name, email) VALUES
+(1, 'Asha',  'Singh',   'asha@example.com'),
+(2, 'Rohit', 'Patil',   'rohit@example.com'),
+(3, 'Neha',  'Sharma',  'neha@example.com');
+
+-- EXPECTED TO FAIL (UNIQUE email): Uncomment to test
+-- INSERT INTO students (student_id, first_name, last_name, email)
+-- VALUES (4, 'Sam', 'Khan', 'neha@example.com'); -- Duplicate email
+
+
+-- =============================================================================
+-- EXERCISE 2 – Composite Primary Key
+-- =============================================================================
+/*
+WHY:
+- Sometimes one column is not enough to uniquely identify a row.
+- Composite PK uses two or more columns to guarantee uniqueness.
+
+WHAT:
+- Create 'course_enrollment' where (student_id, course_id) together are PK.
+- Ensures a student can’t enroll in the same course twice.
+
+SCENARIO:
+- Many-to-many relationships (Students <-> Courses, Users <-> Roles, Orders <-> Products).
+- Junction/bridge tables typically use composite keys.
+
+GOTCHA:
+- Composite PK prevents duplicates of the combined pair, not individual columns.
+*/
+
+-- SOLUTION
+CREATE TABLE course_enrollment (
+  student_id INT,
+  course_id  INT,
+  enrollment_date DATE,
+  PRIMARY KEY (student_id, course_id)
+) ENGINE=InnoDB;
+
+-- VALIDATION (works now; FKs not added yet)
+INSERT INTO course_enrollment (student_id, course_id, enrollment_date) VALUES
+(1, 101, '2025-01-10'),
+(2, 101, '2025-01-12'),
+(2, 102, '2025-01-15');
+
+-- EXPECTED TO FAIL (duplicate composite key): Uncomment
+-- INSERT INTO course_enrollment (student_id, course_id, enrollment_date)
+-- VALUES (1, 101, '2025-02-01'); -- Same (student_id, course_id)
+
+
+-- =============================================================================
+-- EXERCISE 3 – Foreign Keys (Single-Column)
+-- =============================================================================
+/*
+WHY:
+- FOREIGN KEY enforces referential integrity (child rows must reference
+  valid parent rows). Prevents orphan records.
+
+WHAT:
+- Create 'courses' with a PK.
+- Add FKs in 'course_enrollment' so student_id -> students(student_id),
+  and course_id -> courses(course_id).
+
+SCENARIO:
+- Ensuring enrollments reference actual students and valid courses.
+- Common in order->customer, order_item->product, payment->order.
+
+GOTCHA:
+- Parent must exist before inserting child rows (or defer inserts).
+- Use ON DELETE/UPDATE actions carefully (RESTRICT, CASCADE, SET NULL).
+*/
+
+-- SOLUTION (create parent table first)
+CREATE TABLE courses (
+  course_id   INT PRIMARY KEY,
+  course_name VARCHAR(100),
+  credits     INT
+) ENGINE=InnoDB;
+
+-- Seed courses
+INSERT INTO courses (course_id, course_name, credits) VALUES
+(101, 'Database Fundamentals', 4),
+(102, 'Intro to Programming',  3),
+(103, 'Data Modeling',         3);
+
+-- Add FKs to enrollment
+ALTER TABLE course_enrollment
+  ADD CONSTRAINT fk_enroll_student
+    FOREIGN KEY (student_id) REFERENCES students(student_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  ADD CONSTRAINT fk_enroll_course
+    FOREIGN KEY (course_id)  REFERENCES courses(course_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT;
+
+-- VALIDATION: invalid references should fail (uncomment to test)
+-- INSERT INTO course_enrollment (student_id, course_id, enrollment_date)
+-- VALUES (999, 101, '2025-02-05'); -- student 999 doesn't exist
+-- INSERT INTO course_enrollment (student_id, course_id, enrollment_date)
+-- VALUES (1, 999, '2025-02-05');   -- course 999 doesn't exist
+
+-- VALID (references exist)
+INSERT INTO course_enrollment (student_id, course_id, enrollment_date)
+VALUES (3, 103, '2025-01-20');
+
+
+-- =============================================================================
+-- EXERCISE 4 – Composite Foreign Key
+-- =============================================================================
+/*
+WHY:
+- When the parent key is composite, the child must reference the same columns
+  to keep integrity at the pair level.
+
+WHAT:
+- Create 'exam_results' with PK (student_id, course_id) and a composite FK
+  to 'course_enrollment(student_id, course_id)'.
+
+SCENARIO:
+- Only students who are enrolled in a course can have exam results for it.
+- Typical in attendance, grades, project submissions linked to enrollment.
+
+GOTCHA:
+- Column order and data types must match exactly for composite FKs.
+*/
+
+-- SOLUTION
+CREATE TABLE exam_results (
+  student_id     INT,
+  course_id      INT,
+  marks_obtained INT,
+  PRIMARY KEY (student_id, course_id),
+  CONSTRAINT fk_results_enrollment
+    FOREIGN KEY (student_id, course_id)
+    REFERENCES course_enrollment(student_id, course_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- VALIDATION: results for existing enrollments
+INSERT INTO exam_results (student_id, course_id, marks_obtained) VALUES
+(1, 101, 86),
+(2, 101, 74),
+(2, 102, 91);
+
+-- EXPECTED TO FAIL (not enrolled): Uncomment
+-- INSERT INTO exam_results (student_id, course_id, marks_obtained)
+-- VALUES (3, 101, 80); -- (3,101) not in course_enrollment
+
+
+-- =============================================================================
+-- EXERCISE 5 – Multiple Constraints (PK, FK, NOT NULL, DEFAULT)
+-- =============================================================================
+/*
+WHY:
+- Tables often need a mix of constraints: PK for identity, FK for relationships,
+  NOT NULL for required data, DEFAULT for sensible fallbacks.
+
+WHAT:
+- Create 'assignments' with:
+  PK assignment_id, FK course_id -> courses,
+  title NOT NULL,
+  due_date DEFAULT CURRENT_DATE,
+  max_marks DEFAULT 100.
+
+SCENARIO:
+- Course assignments: every assignment belongs to a course and has sensible
+  defaults if not provided.
+
+GOTCHA:
+- MySQL 8.0.13+ supports expression defaults (CURRENT_DATE). For older versions,
+  you may need to supply due_date in INSERT or use a trigger.
+*/
+
+-- SOLUTION
+CREATE TABLE assignments (
+  assignment_id INT PRIMARY KEY,
+  course_id     INT,
+  title         VARCHAR(100) NOT NULL,
+  -- For MySQL 8.0.13+: expression default allowed
+  due_date      DATE DEFAULT (CURRENT_DATE),
+  max_marks     INT  DEFAULT 100,
+  CONSTRAINT fk_assign_course
+    FOREIGN KEY (course_id) REFERENCES courses(course_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- VALIDATION: insert with defaults
+INSERT INTO assignments (assignment_id, course_id, title)
+VALUES (1, 101, 'ER Diagram Basics');  -- due_date=today, max_marks=100
+
+-- Explicit values
+INSERT INTO assignments (assignment_id, course_id, title, due_date, max_marks)
+VALUES (2, 102, 'Loops & Conditions', '2025-02-10', 50);
+
+-- EXPECTED TO FAIL: FK / NOT NULL (uncomment to test)
+-- INSERT INTO assignments (assignment_id, course_id, title)
+-- VALUES (3, 999, 'Ghost Course HW'); -- bad FK
+-- INSERT INTO assignments (assignment_id, course_id, title)
+-- VALUES (4, 101, NULL);              -- title NOT NULL
+
+
+-- ----------------------------------------------------------------------------
+-- QUICK QUERIES (optional exploration for students)
+-- ----------------------------------------------------------------------------
+-- See students and their enrollments
+-- SELECT s.student_id, s.first_name, s.last_name, ce.course_id, ce.enrollment_date
+-- FROM students s
+-- JOIN course_enrollment ce ON s.student_id = ce.student_id
+-- ORDER BY s.student_id, ce.course_id;
+
+-- See enrollments and results
+-- SELECT ce.student_id, ce.course_id, er.marks_obtained
+-- FROM course_enrollment ce
+-- LEFT JOIN exam_results er
+--   ON ce.student_id = er.student_id AND ce.course_id = er.course_id
+-- ORDER BY ce.student_id, ce.course_id;
+
+-- Assignments per course
+-- SELECT c.course_name, a.assignment_id, a.title, a.due_date, a.max_marks
+-- FROM courses c
+-- JOIN assignments a ON c.course_id = a.course_id
+-- ORDER BY c.course_id, a.assignment_id;
+
+-- ----------------------------------------------------------------------------
+-- MINI-RECAP (teacher notes)
+-- ----------------------------------------------------------------------------
+-- Primary Key: unique row identity (single or composite).
+-- Unique: prevents duplicate values in a column (e.g., emails).
+-- Foreign Key: enforces valid parent-child relationships.
+-- Composite FK: matches a composite PK in parent (order matters!).
+-- NOT NULL & DEFAULT: data quality and sensible defaults at the schema level.
+-- ----------------------------------------------------------------------------
+
+
+
+############################################################## Creating a data Model for Ecommerce Project ###############################################
+
+
+/* 
+================================================================================
+E-COMMERCE DATA MODEL (MySQL 8.0+, InnoDB)
+Style: Short notes (WHY / WHAT / SCENARIO / GOTCHA) + clean constraints
+Author: <Your Name>
+
+GOALS
+- Demonstrate real-world relational modeling with PK, FK, UNIQUE, CHECK, DEFAULT.
+- Show single-column and composite keys, junction tables, and CASCADE choices.
+- Be re-runnable (DROP IF EXISTS). Keep column types simple & practical.
+
+RUN ORDER
+- Create database → reference/master tables → core entities → junctions → transactions
+================================================================================
+*/
+
+-- =============================================================================
+-- 0) DATABASE SETUP
+-- =============================================================================
+DROP DATABASE IF EXISTS ecommerce_demo;
+CREATE DATABASE ecommerce_demo;
+USE ecommerce_demo;
+
+-- Clean slate (drop in FK-safe order if partially run)
+DROP TABLE IF EXISTS shipment_items;
+DROP TABLE IF EXISTS shipments;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS carts;
+DROP TABLE IF EXISTS inventory;
+DROP TABLE IF EXISTS warehouses;
+DROP TABLE IF EXISTS product_categories;
+DROP TABLE IF EXISTS categories;
+DROP TABLE IF EXISTS products;
+DROP TABLE IF EXISTS reviews;
+DROP TABLE IF EXISTS addresses;
+DROP TABLE IF EXISTS users;
+
+-- =============================================================================
+-- 1) USERS
+-- =============================================================================
+/*
+WHY: Every e-commerce action (cart, order, review) ties to a user.
+WHAT: Simple user table with unique email and basic status.
+SCENARIO: Login, ownership of carts/orders, writing reviews.
+GOTCHA: Allow NULL phone; enforce UNIQUE email; keep status in a safe domain.
+*/
+CREATE TABLE users (
+  user_id      BIGINT PRIMARY KEY AUTO_INCREMENT,
+  full_name    VARCHAR(100)        NOT NULL,
+  email        VARCHAR(150)        NOT NULL,
+  phone        VARCHAR(20),
+  status       VARCHAR(20)         NOT NULL DEFAULT 'ACTIVE',
+  created_at   DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT uq_users_email UNIQUE (email),
+  CONSTRAINT chk_users_status CHECK (status IN ('ACTIVE','INACTIVE','BANNED'))
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- 2) ADDRESSES
+-- =============================================================================
+/*
+WHY: Shipping/Billing addresses are reused across orders.
+WHAT: Separate table; orders reference address rows to avoid duplication.
+SCENARIO: One user with multiple shipping addresses.
+GOTCHA: Keep addresses normalized but snapshotting at order-time is also common;
+        here we keep references for teaching purposes.
+*/
+CREATE TABLE addresses (
+  address_id   BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id      BIGINT              NOT NULL,
+  line1        VARCHAR(200)        NOT NULL,
+  line2        VARCHAR(200),
+  city         VARCHAR(100)        NOT NULL,
+  state        VARCHAR(100),
+  postal_code  VARCHAR(20)         NOT NULL,
+  country      VARCHAR(2)          NOT NULL DEFAULT 'IN', -- ISO-2
+  is_default   BOOLEAN             NOT NULL DEFAULT FALSE,
+  created_at   DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_addr_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- 3) CATEGORIES (self-reference optional) + JUNCTION later
+-- =============================================================================
+/*
+WHY: Products are organized for browsing and analytics.
+WHAT: Category tree (optional parent_id) with unique name per parent.
+SCENARIO: "Electronics > Mobiles", "Electronics > Laptops".
+GOTCHA: Self-referencing FKs require nullable parent_id and matching index.
+*/
+CREATE TABLE categories (
+  category_id  BIGINT PRIMARY KEY AUTO_INCREMENT,
+  parent_id    BIGINT,
+  name         VARCHAR(100)        NOT NULL,
+  is_active    BOOLEAN             NOT NULL DEFAULT TRUE,
+  CONSTRAINT fk_cat_parent FOREIGN KEY (parent_id) REFERENCES categories(category_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE UNIQUE INDEX uq_categories_parent_name ON categories(parent_id, name);
+
+-- =============================================================================
+-- 4) PRODUCTS
+-- =============================================================================
+/*
+WHY: Core sellable entity with SKU & price.
+WHAT: Product with unique (brand, sku) and price constraints.
+SCENARIO: Multi-brand catalog; same SKU can exist in different brands.
+GOTCHA: Always CHECK price >= 0; ensure active flag for soft-hides.
+*/
+CREATE TABLE products (
+  product_id    BIGINT PRIMARY KEY AUTO_INCREMENT,
+  brand         VARCHAR(80)         NOT NULL,
+  sku           VARCHAR(80)         NOT NULL,
+  product_name  VARCHAR(150)        NOT NULL,
+  description   TEXT,
+  price         DECIMAL(12,2)       NOT NULL,
+  currency      CHAR(3)             NOT NULL DEFAULT 'INR',
+  is_active     BOOLEAN             NOT NULL DEFAULT TRUE,
+  created_at    DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME            NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT chk_products_price CHECK (price >= 0)
+) ENGINE=InnoDB;
+
+CREATE UNIQUE INDEX uq_products_brand_sku ON products(brand, sku);
+
+-- =============================================================================
+-- 5) PRODUCT-CATEGORIES (Many-to-Many junction)
+-- =============================================================================
+/*
+WHY: A product can belong to multiple categories.
+WHAT: Junction table with composite PK to avoid duplicates.
+SCENARIO: "Mobile" belongs to "Electronics" + "New Arrivals".
+GOTCHA: Composite PK prevents repeated mapping rows.
+*/
+CREATE TABLE product_categories (
+  product_id   BIGINT NOT NULL,
+  category_id  BIGINT NOT NULL,
+  PRIMARY KEY (product_id, category_id),
+  CONSTRAINT fk_pc_product  FOREIGN KEY (product_id)  REFERENCES products(product_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_pc_category FOREIGN KEY (category_id) REFERENCES categories(category_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- 6) WAREHOUSES & INVENTORY
+-- =============================================================================
+/*
+WHY: Track stock per warehouse/location.
+WHAT: Warehouse master + Inventory with composite key (product, warehouse).
+SCENARIO: Multi-city inventory and allocation.
+GOTCHA: quantity >= 0; composite PK guarantees uniqueness per location.
+*/
+CREATE TABLE warehouses (
+  warehouse_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  name         VARCHAR(100)        NOT NULL,
+  city         VARCHAR(100),
+  state        VARCHAR(100),
+  country      VARCHAR(2)          NOT NULL DEFAULT 'IN',
+  is_active    BOOLEAN             NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
+CREATE TABLE inventory (
+  product_id    BIGINT  NOT NULL,
+  warehouse_id  BIGINT  NOT NULL,
+  quantity      INT     NOT NULL DEFAULT 0,
+  safety_stock  INT     NOT NULL DEFAULT 0,
+  updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (product_id, warehouse_id),
+  CONSTRAINT fk_inv_product   FOREIGN KEY (product_id)   REFERENCES products(product_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_inv_warehouse FOREIGN KEY (warehouse_id) REFERENCES warehouses(warehouse_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT chk_inv_qty CHECK (quantity >= 0 AND safety_stock >= 0)
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- 7) CARTS & CART ITEMS
+-- =============================================================================
+/*
+WHY: Users (or guests) collect items before ordering.
+WHAT: Cart (may belong to user or be guest_token) + items referencing products.
+SCENARIO: Guest checkout; later link to a new account.
+GOTCHA: Either user_id OR guest_token must be present; use a simple CHECK.
+*/
+CREATE TABLE carts (
+  cart_id      BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id      BIGINT,
+  guest_token  VARCHAR(64), -- nullable; unique when used
+  status       VARCHAR(20)  NOT NULL DEFAULT 'OPEN',
+  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT uq_carts_guest UNIQUE (guest_token),
+  CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users(user_id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT chk_cart_owner CHECK (
+    (user_id IS NOT NULL) OR (guest_token IS NOT NULL)
+  ),
+  CONSTRAINT chk_cart_status CHECK (status IN ('OPEN','CONVERTED','ABANDONED'))
+) ENGINE=InnoDB;
+
+CREATE TABLE cart_items (
+  cart_item_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  cart_id      BIGINT     NOT NULL,
+  product_id   BIGINT     NOT NULL,
+  quantity     INT        NOT NULL DEFAULT 1,
+  unit_price   DECIMAL(12,2) NOT NULL, -- capture at add-to-cart time
+  added_at     DATETIME   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_ci_cart    FOREIGN KEY (cart_id)    REFERENCES carts(cart_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_ci_product FOREIGN KEY (product_id) REFERENCES products(product_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT chk_ci_qty CHECK (quantity > 0),
+  CONSTRAINT chk_ci_price CHECK (unit_price >= 0)
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- 8) ORDERS & ORDER ITEMS
+-- =============================================================================
+/*
+WHY: Central transaction: converts cart to order and locks prices/qtys.
+WHAT: Order has snapshot links to shipping/billing addresses + status.
+SCENARIO: Users place orders; capture price_at_purchase per line.
+GOTCHA: Keep monetary values in order_items immutable after placement.
+*/
+CREATE TABLE orders (
+  order_id           BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id            BIGINT           NOT NULL,
+  cart_id            BIGINT,
+  billing_address_id BIGINT           NOT NULL,
+  shipping_address_id BIGINT          NOT NULL,
+  order_status       VARCHAR(20)      NOT NULL DEFAULT 'PLACED',
+  order_total        DECIMAL(14,2)    NOT NULL DEFAULT 0.00,
+  placed_at          DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at         DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_ord_user  FOREIGN KEY (user_id)  REFERENCES users(user_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_ord_cart  FOREIGN KEY (cart_id)  REFERENCES carts(cart_id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT fk_ord_bill  FOREIGN KEY (billing_address_id)  REFERENCES addresses(address_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT fk_ord_ship  FOREIGN KEY (shipping_address_id) REFERENCES addresses(address_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT chk_ord_status CHECK (order_status IN ('PLACED','PAID','SHIPPED','DELIVERED','CANCELLED','REFUNDED')),
+  CONSTRAINT chk_ord_total  CHECK (order_total >= 0)
+) ENGINE=InnoDB;
+
+CREATE TABLE order_items (
+  order_item_id     BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id          BIGINT          NOT NULL,
+  product_id        BIGINT          NOT NULL,
+  quantity          INT             NOT NULL,
+  price_at_purchase DECIMAL(12,2)   NOT NULL,
+  CONSTRAINT fk_oi_order   FOREIGN KEY (order_id)   REFERENCES orders(order_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_oi_product FOREIGN KEY (product_id) REFERENCES products(product_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT chk_oi_qty    CHECK (quantity > 0),
+  CONSTRAINT chk_oi_price  CHECK (price_at_purchase >= 0)
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- 9) PAYMENTS
+-- =============================================================================
+/*
+WHY: Track payment attempts and statuses for an order.
+WHAT: Payment rows reference orders; amount, provider, status.
+SCENARIO: Online gateway -> pending -> success/failure -> refunds.
+GOTCHA: sum(successful payments) ≤ order_total; (enforce via app or trigger).
+*/
+CREATE TABLE payments (
+  payment_id     BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id       BIGINT          NOT NULL,
+  amount         DECIMAL(14,2)   NOT NULL,
+  provider       VARCHAR(40)     NOT NULL, -- e.g., RAZORPAY, STRIPE
+  status         VARCHAR(20)     NOT NULL DEFAULT 'INITIATED',
+  transaction_ref VARCHAR(100),
+  paid_at        DATETIME,
+  created_at     DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pay_order FOREIGN KEY (order_id) REFERENCES orders(order_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT chk_pay_amount CHECK (amount >= 0),
+  CONSTRAINT chk_pay_status CHECK (status IN ('INITIATED','SUCCESS','FAILED','REFUNDED','PARTIAL'))
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- 10) SHIPMENTS (+ optional item split)
+-- =============================================================================
+/*
+WHY: Orders may ship in parts from multiple warehouses.
+WHAT: Shipment master + optional shipment_items to track per-line fulfillment.
+SCENARIO: One order, two packages; different tracking IDs.
+GOTCHA: Keep shipment status distinct from order status.
+*/
+CREATE TABLE shipments (
+  shipment_id     BIGINT PRIMARY KEY AUTO_INCREMENT,
+  order_id        BIGINT          NOT NULL,
+  warehouse_id    BIGINT,
+  carrier         VARCHAR(80),
+  tracking_number VARCHAR(120),
+  status          VARCHAR(20)     NOT NULL DEFAULT 'CREATED',
+  shipped_at      DATETIME,
+  delivered_at    DATETIME,
+  created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_ship_order     FOREIGN KEY (order_id)    REFERENCES orders(order_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_ship_warehouse FOREIGN KEY (warehouse_id) REFERENCES warehouses(warehouse_id)
+    ON UPDATE CASCADE ON DELETE SET NULL,
+  CONSTRAINT chk_ship_status   CHECK (status IN ('CREATED','IN_TRANSIT','DELIVERED','RETURNED','CANCELLED'))
+) ENGINE=InnoDB;
+
+CREATE TABLE shipment_items (
+  shipment_item_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  shipment_id      BIGINT      NOT NULL,
+  order_item_id    BIGINT      NOT NULL,
+  quantity         INT         NOT NULL,
+  CONSTRAINT fk_si_shipment  FOREIGN KEY (shipment_id)   REFERENCES shipments(shipment_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_si_orderitem FOREIGN KEY (order_item_id) REFERENCES order_items(order_item_id)
+    ON UPDATE CASCADE ON DELETE RESTRICT,
+  CONSTRAINT chk_si_qty CHECK (quantity > 0)
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- 11) REVIEWS
+-- =============================================================================
+/*
+WHY: Product feedback drives trust and search ranking.
+WHAT: One review per (user, product); enforce using UNIQUE pair.
+SCENARIO: User rates a product after delivery.
+GOTCHA: Allow review only if user has an order_item for that product (enforce in app or via more complex SQL).
+*/
+CREATE TABLE reviews (
+  review_id   BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id     BIGINT        NOT NULL,
+  product_id  BIGINT        NOT NULL,
+  rating      TINYINT       NOT NULL,
+  comment     VARCHAR(1000),
+  reviewed_at DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_rev_user    FOREIGN KEY (user_id)    REFERENCES users(user_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_rev_product FOREIGN KEY (product_id) REFERENCES products(product_id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT uq_review_user_product UNIQUE (user_id, product_id),
+  CONSTRAINT chk_rev_rating CHECK (rating BETWEEN 1 AND 5)
+) ENGINE=InnoDB;
+
+-- =============================================================================
+-- SEEDING (OPTIONAL, MINIMAL) — keep tiny for class demo
+-- =============================================================================
+INSERT INTO users (full_name, email) VALUES
+('Asha Singh', 'asha@example.com'),
+('Rohit Patil', 'rohit@example.com');
+
+INSERT INTO addresses (user_id, line1, city, postal_code, country, is_default)
+VALUES
+(1, '221B Baker Street', 'Pune', '411001', 'IN', TRUE),
+(1, 'MG Road 10',        'Pune', '411005', 'IN', FALSE),
+(2, 'Indiranagar 5',     'Bengaluru', '560038', 'IN', TRUE);
+
+INSERT INTO categories (name) VALUES ('Electronics'), ('Home'), ('Fashion');
+INSERT INTO categories (parent_id, name) VALUES (1, 'Mobiles'), (1, 'Laptops');
+
+INSERT INTO products (brand, sku, product_name, price)
+VALUES
+('Acme', 'SKU-100', 'Acme Phone X', 19999.00),
+('Acme', 'SKU-200', 'Acme Laptop A', 59999.00),
+('Bravo','SKU-300', 'Bravo Earbuds', 1999.00);
+
+INSERT INTO product_categories (product_id, category_id)
+VALUES
+(1, 4), -- Phone X -> Mobiles
+(2, 5), -- Laptop A -> Laptops
+(3, 1); -- Earbuds -> Electronics
+
+INSERT INTO warehouses (name, city, state) VALUES
+('WH-Pune', 'Pune', 'MH'), ('WH-BLR', 'Bengaluru', 'KA');
+
+INSERT INTO inventory (product_id, warehouse_id, quantity, safety_stock)
+VALUES
+(1, 1, 50, 5),
+(2, 1, 30, 3),
+(3, 2, 200, 10);
+
+-- Create a cart for Asha, add items
+INSERT INTO carts (user_id, status) VALUES (1, 'OPEN');
+INSERT INTO cart_items (cart_id, product_id, quantity, unit_price)
+VALUES
+(1, 1, 1, 19999.00),
+(1, 3, 2, 1999.00);
+
+-- Place an order from that cart
+INSERT INTO orders (user_id, cart_id, billing_address_id, shipping_address_id, order_status, order_total)
+VALUES (1, 1, 1, 2, 'PLACED', 19999.00 + 2*1999.00);
+
+INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase)
+VALUES
+(1, 1, 1, 19999.00),
+(1, 3, 2, 1999.00);
+
+-- Payment success
+INSERT INTO payments (order_id, amount, provider, status, transaction_ref, paid_at)
+VALUES (1, 23997.00, 'RAZORPAY', 'SUCCESS', 'TXN123', NOW());
+
+-- Shipment
+INSERT INTO shipments (order_id, warehouse_id, carrier, tracking_number, status, shipped_at)
+VALUES (1, 1, 'Delhivery', 'DLV-TRACK-001', 'IN_TRANSIT', NOW());
+
+INSERT INTO shipment_items (shipment_id, order_item_id, quantity)
+VALUES (1, 1, 1), (1, 2, 2);
+
+-- Review after delivery (pretend delivered)
+INSERT INTO reviews (user_id, product_id, rating, comment)
+VALUES (1, 1, 5, 'Fantastic phone!');
+
+-- =============================================================================
+-- QUICK CHECKS (commented for class demos)
+-- =============================================================================
+-- SELECT * FROM users;
+-- SELECT * FROM addresses;
+-- SELECT * FROM products;
+-- SELECT * FROM categories;
+-- SELECT * FROM product_categories;
+-- SELECT * FROM inventory;
+-- SELECT * FROM carts;
+-- SELECT * FROM cart_items;
+-- SELECT * FROM orders;
+-- SELECT * FROM order_items;
+-- SELECT * FROM payments;
+-- SELECT * FROM shipments;
+-- SELECT * FROM shipment_items;
+-- SELECT * FROM reviews;
+
+-- Sample join: order summary
+-- SELECT o.order_id, u.full_name, o.order_status, o.order_total, o.placed_at
+-- FROM orders o JOIN users u ON o.user_id = u.user_id;
+
+-- Sample join: inventory per product
+-- SELECT p.product_name, w.name AS warehouse, i.quantity, i.safety_stock
+-- FROM inventory i
+-- JOIN products p   ON p.product_id = i.product_id
+-- JOIN warehouses w ON w.warehouse_id = i.warehouse_id
+-- ORDER BY p.product_id;
+
+-- EXPECTED-TO-FAIL TESTS (uncomment to teach constraints)
+-- INSERT INTO products (brand, sku, product_name, price) VALUES ('Acme','SKU-100','Dup',-1); -- price < 0
+-- INSERT INTO cart_items (cart_id, product_id, quantity, unit_price) VALUES (999,1,1,100); -- bad FK
+-- INSERT INTO order_items (order_id, product_id, quantity, price_at_purchase) VALUES (999, 1, 1, 100); -- bad order FK
+-- INSERT INTO reviews (user_id, product_id, rating) VALUES (1,1,6); -- rating > 5
+

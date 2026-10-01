@@ -1,0 +1,541 @@
+
+----- SECTION 1 ---------------
+
+-- =========================================================
+-- SQL PRACTICE: Filtering & Pattern Matching (MySQL)
+-- Covers: SELECT, WHERE, DISTINCT, AND/OR, IN/NOT IN,
+--         BETWEEN, LIKE (wildcards), IS NULL / IS NOT NULL
+-- =========================================================
+
+-- Clean start (safe to re-run)
+DROP DATABASE IF EXISTS sql_practice_filters;
+CREATE DATABASE sql_practice_filters CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+USE sql_practice_filters;
+
+-- =========================
+-- SCHEMA
+-- =========================
+
+-- Departments master
+DROP TABLE IF EXISTS departments;
+CREATE TABLE departments (
+  dept_id   INT PRIMARY KEY,
+  dept_name VARCHAR(50) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+
+INSERT INTO departments (dept_id, dept_name) VALUES
+ (10,'Sales'),
+ (20,'IT'),
+ (30,'HR'),
+ (40,'Finance'),
+ (50,'Operations'),
+ (60,'R&D'),
+ (70,'Marketing');
+
+-- Employees
+DROP TABLE IF EXISTS employees;
+CREATE TABLE employees (
+  emp_id     INT PRIMARY KEY,
+  first_name VARCHAR(50) NOT NULL,
+  last_name  VARCHAR(50) NOT NULL,
+  email      VARCHAR(100) UNIQUE,
+  phone      VARCHAR(15),
+  city       VARCHAR(50),
+  dept_id    INT NULL,
+  salary     DECIMAL(10,2) NOT NULL,
+  hire_date  DATE NOT NULL,
+  status     VARCHAR(20) NOT NULL DEFAULT ('ACTIVE'),
+  notes      TEXT NULL,
+  CONSTRAINT fk_emp_dept FOREIGN KEY (dept_id)
+    REFERENCES departments(dept_id)
+    ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+INSERT INTO employees
+(emp_id, first_name, last_name, email, phone, city, dept_id, salary, hire_date, status, notes) VALUES
+(1,  'Amit',   'Sharma',   'amit.sharma@example.com',   '9812345678', 'Mumbai',     10, 70000, '2022-03-15', 'ACTIVE',   NULL),
+(2,  'Sara',   'Ali',      'sara.ali@example.com',      '9822221111', 'Delhi',      20, 90000, '2021-07-01', 'ACTIVE',   NULL),
+(3,  'Ravi',   'Kumar',    'ravi.kumar@example.com',    NULL,         'Pune',       30, 55000, '2023-11-10', 'ACTIVE',   NULL),
+(4,  'Neha',   'Patil',    'neha.patil@example.com',    '9898989898', 'Mumbai',     40, 80000, '2019-12-01', 'ACTIVE',   NULL),
+(5,  'Vijay',  'Iyer',     NULL,                        '9900000001', 'Chennai',    10, 60000, '2024-01-05', 'ACTIVE',   'Contract-to-hire'),
+(6,  'Priya',  'Nair',     'priya.nair@example.com',    '9876500000', 'Hyderabad',  60,120000, '2020-04-20', 'ACTIVE',   NULL),
+(7,  'Arjun',  'Mehta',    'arjun.mehta@example.com',   '9811111111', 'Bengaluru',  20, 75000, '2022-08-18', 'ACTIVE',   NULL),
+(8,  'Sanya',  'Roy',      'sanya.roy@example.com',     '9800001234', 'Kolkata',    70, 65000, '2023-02-14', 'ACTIVE',   NULL),
+(9,  'Kunal',  'Joshi',    'kunal.joshi@example.com',   NULL,         'Pune',       50, 50000, '2018-09-30', 'INACTIVE', 'On sabbatical'),
+(10, 'Meera',  'Das',      'meera.das@example.com',     '9912345678', 'Delhi',     NULL, 40000, '2025-04-01', 'ACTIVE',   'Intern'),
+(11, 'Sameer', 'Singh',    'sameer.singh@example.com',  '9899900000', 'Mumbai',     10, 30000, '2021-01-10', 'ACTIVE',   NULL),
+(12, 'Sunita', 'Kale',     'sunita.kale@gmail.com',     '9899901234', 'Nashik',     50, 45000, '2024-07-09', 'ACTIVE',   NULL),
+(13, 'Saurabh','Choudhary','saurabh.c@example.com',     NULL,         'Jaipur',     20, 82000, '2022-12-12', 'ACTIVE',   NULL),
+(14, 'Anita',  'Rao',      'anita.rao@abc.co.in',       '9812340000', 'Hyderabad',  70, 73000, '2020-06-06', 'ACTIVE',   NULL),
+(15, 'Deepak', 'Verma',    'deepak.verma@example.com',  '9812300000', 'Bhopal',     40, 95000, '2017-05-22', 'ACTIVE',   NULL),
+(16, 'Gita',   'Menon',    'gita.menon@example.com',    '9811112222', 'Bengaluru',  60,110000, '2019-08-08', 'ACTIVE',   NULL),
+(17, 'Harsh',  'Kapoor',   'harsh.kapoor@gmail.com',    '9800123456', 'Delhi',      30, 52000, '2023-10-01', 'ACTIVE',   NULL),
+(18, 'Ishita', 'Saxena',   'ishita.saxena@example.com', '9822233344', 'Lucknow',    70, 68000, '2022-03-03', 'ACTIVE',   NULL),
+(19, 'Jay',    'Mishra',   'jay.mishra@example.com',    '9800099999', 'Delhi',      20, 77000, '2021-11-11', 'ACTIVE',   NULL),
+(20, 'Kabir',  'Khanna',   NULL,                        NULL,         'Mumbai',     20, 88000, '2025-02-02', 'ACTIVE',   'Remote');
+
+-- Products
+DROP TABLE IF EXISTS products;
+CREATE TABLE products (
+  product_id      INT PRIMARY KEY,
+  product_name    VARCHAR(100) NOT NULL,
+  category        VARCHAR(50) NOT NULL,
+  price           DECIMAL(10,2) NOT NULL,
+  in_stock        INT NOT NULL,
+  discontinued_at DATE NULL
+) ENGINE=InnoDB;
+
+INSERT INTO products (product_id, product_name, category, price, in_stock, discontinued_at) VALUES
+(1,  'iPhone 13',             'Electronics', 69999,  5,    NULL),
+(2,  'Bluetooth Speaker',     'Electronics',  2999, 120,    NULL),
+(3,  'Cricket Bat',           'Sports',        1999,  45,   NULL),
+(4,  'Yoga Mat - 6mm',        'Sports',         999, 200,   NULL),
+(5,  'Data Engineering 101',  'Books',          799,   0,   NULL),
+(6,  'Organic Almonds 1kg',   'Grocery',       1099,  75,   NULL),
+(7,  'LED TV 43"',            'Electronics',  24999,  10,   NULL),
+(8,  'Tennis Racket Pro',     'Sports',        8499,   2,  '2023-08-01'),
+(9,  'Kindle Paperwhite',     'Electronics',  12999,   0,   NULL),
+(10, 'Cookbook: Indian Veg',  'Books',          499,  33,   NULL);
+
+-- Orders (to practice IS NULL)
+DROP TABLE IF EXISTS orders;
+CREATE TABLE orders (
+  order_id     INT PRIMARY KEY,
+  customer_name VARCHAR(100) NOT NULL,
+  product_id    INT NOT NULL,
+  quantity      INT NOT NULL,
+  order_date    DATE NOT NULL,
+  shipped_date  DATE NULL,
+  status        VARCHAR(20) NOT NULL,
+  CONSTRAINT fk_orders_product FOREIGN KEY (product_id)
+    REFERENCES products(product_id) ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+INSERT INTO orders (order_id, customer_name, product_id, quantity, order_date, shipped_date, status) VALUES
+(101, 'Rahul Gupta',   2,  1, '2025-07-01', '2025-07-03', 'SHIPPED'),
+(102, 'Priya Singh',   3,  2, '2025-07-02', NULL,         'PENDING'),
+(103, 'Anil Kumar',    5,  1, '2025-07-05', NULL,         'PENDING'),
+(104, 'Neha Gupta',    7,  1, '2025-07-10','2025-07-12',  'SHIPPED'),
+(105, 'Vikram Rao',    1,  1, '2025-07-11', NULL,         'PENDING'),
+(106, 'Asha Menon',    6,  5, '2025-07-12','2025-07-15',  'SHIPPED'),
+(107, 'Rohit Mehta',   9,  1, '2025-07-15', NULL,         'PENDING'),
+(108, 'Sneha Patil',   4,  3, '2025-07-16','2025-07-17',  'SHIPPED'),
+(109, 'Kiran Desai',   8,  1, '2025-07-20', NULL,         'PENDING'),
+(110, 'Amit Shah',    10,  2, '2025-07-22','2025-07-25',  'SHIPPED'),
+(111, 'Pooja Iyer',    2,  1, '2025-07-25', NULL,         'PENDING'),
+(112, 'Sanjay Roy',    6,  1, '2025-07-27','2025-07-29',  'SHIPPED');
+
+-- =========================================================
+-- PRACTICE QUERIES (Run each block, read comments)
+-- =========================================================
+
+-- 1) SELECT (basic projection)
+-- Show all columns
+SELECT * FROM employees;
+
+
+-- 2) WHERE (basic filtering)
+-- All employees in Mumbai
+SELECT emp_id, first_name, last_name, city
+FROM employees
+WHERE city = 'Mumbai';
+
+-- Salary greater than 75,000
+SELECT emp_id, first_name, salary
+FROM employees
+WHERE salary > 75000;
+
+-- Hired on/after 2023-01-01
+SELECT emp_id, first_name, hire_date
+FROM employees
+WHERE hire_date >= '2023-01-01';
+
+-- 3) DISTINCT (remove duplicates)
+-- Unique list of cities
+SELECT DISTINCT city FROM employees ;
+
+-- Unique product categories
+SELECT DISTINCT category FROM products ;
+
+-- 4) AND / OR (combine conditions)
+-- Employees in Mumbai AND salary >= 70k
+SELECT emp_id, first_name, city, salary
+FROM employees
+WHERE city = 'Mumbai' AND salary >= 70000;
+
+-- Employees in Delhi OR Pune (either city)
+SELECT emp_id, first_name, city, salary
+FROM employees
+WHERE city = 'Delhi' OR city = 'Pune';
+
+-- Correct use of parentheses with OR/AND precedence
+-- (City = Delhi) AND (salary between 60k and 90k OR status = 'INACTIVE')
+SELECT emp_id, first_name, city, salary, status
+FROM employees
+WHERE city = 'Delhi'
+  AND (salary BETWEEN 60000 AND 90000 OR status = 'INACTIVE');
+
+-- 5) IN (list membership)
+-- Employees from a set of cities
+SELECT emp_id, first_name, city
+FROM employees
+WHERE city IN ('Mumbai','Delhi','Pune');
+
+
+-- 6) NOT IN (exclude a list) – simple list
+SELECT emp_id, first_name, dept_id
+FROM employees
+WHERE dept_id NOT IN (30, 70);   -- exclude HR(30) and Marketing(70)
+
+
+-- 7) BETWEEN (inclusive boundaries)
+-- Salary between 50k and 80k (inclusive)
+SELECT emp_id, first_name, salary
+FROM employees
+WHERE salary BETWEEN 50000 AND 80000;
+
+-- Hire date between 2022 and 2024 (inclusive)
+SELECT emp_id, first_name, hire_date
+FROM employees
+WHERE hire_date BETWEEN '2022-01-01' AND '2024-12-31';
+
+-- 8) LIKE (pattern matching) – % (any length), _ (single char)
+-- Names starting with 'S' (case-insensitive in default CI collation)
+SELECT emp_id, first_name
+FROM employees
+WHERE first_name LIKE 'S%';
+
+-- Emails ending with @gmail.com
+SELECT emp_id, email
+FROM employees
+WHERE email LIKE '%@gmail.com';
+
+-- Phone numbers starting with '98' and followed by ANY 8 digits
+SELECT emp_id, phone
+FROM employees
+WHERE phone LIKE '98________';
+
+-- Product names containing the word 'Mat' anywhere
+SELECT product_id, product_name
+FROM products
+WHERE product_name LIKE '%Mat%';
+
+-- 9) IS NULL / IS NOT NULL
+-- Employees with missing email (NULL)
+SELECT emp_id, first_name, email
+FROM employees
+WHERE email IS NULL;
+
+-- Orders not yet shipped (shipped_date is NULL)
+SELECT order_id, customer_name, product_id, status
+FROM orders
+WHERE shipped_date IS NULL;
+
+-- Products that WERE discontinued (date present)
+SELECT product_id, product_name, discontinued_at
+FROM products
+WHERE discontinued_at IS NOT NULL;
+
+
+-- 10) DISTINCT + LIKE (intermediate)
+-- Distinct cities of employees whose name starts with 'A' or 'S'
+SELECT DISTINCT city
+FROM employees
+WHERE first_name LIKE 'A%' OR first_name LIKE 'S%' ;
+
+-- 11) Bonus filtering on products
+-- In-stock Electronics priced between 10k and 70k (inclusive)
+SELECT product_id, product_name, price, in_stock
+FROM products
+WHERE category = 'Electronics'
+  AND price BETWEEN 10000 AND 70000
+  AND in_stock > 0 ;
+
+
+
+
+--------------------- SECTION 2 _______________________________________
+
+-- Create a database and switch to it
+CREATE DATABASE IF NOT EXISTS training_db CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+USE training_db;
+
+-- Clean slate
+DROP TABLE IF EXISTS orders;
+
+-- Table with varied datatypes for rich querying
+CREATE TABLE orders (
+  order_id       INT UNSIGNED PRIMARY KEY,
+  customer_id    INT UNSIGNED NOT NULL,
+  customer_name  VARCHAR(100) NOT NULL,
+  email          VARCHAR(120) NOT NULL,
+  city           VARCHAR(60)  NOT NULL,
+  country        VARCHAR(50)  NOT NULL DEFAULT 'India',
+  order_date     DATE         NOT NULL,
+  delivered_at   DATETIME     NULL,
+  status         ENUM('placed','processing','shipped','delivered','cancelled','returned') NOT NULL,
+  payment_method ENUM('card','upi','netbanking','cod','wallet') NOT NULL,
+  total_amount   DECIMAL(10,2) NOT NULL,
+  discount_pct   DECIMAL(5,2) NULL,
+  is_priority    TINYINT(1)   NOT NULL DEFAULT 0,
+  tags           JSON NULL,
+  UNIQUE KEY uk_email_orderdate (email, order_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Seed data (20 rows) with variety: NULLs, enums, JSON, different dates/amounts, priorities
+INSERT INTO orders
+(order_id, customer_id, customer_name, email, city, country, order_date, delivered_at, status, payment_method, total_amount, discount_pct, is_priority, tags)
+VALUES
+(1001, 501, 'Aarav Mehta',       'aarav.mehta@example.com',      'Mumbai',     'India', '2025-01-10', '2025-01-12 14:30:00', 'delivered', 'upi',         1499.00, 10.00, 0, '["electronics","sale"]'),
+(1002, 502, 'Priya Sharma',      'priya.sharma@example.com',     'Pune',       'India', '2025-01-12', NULL,                  'processing','card',       2599.50, NULL,  1, '["fashion"]'),
+(1003, 503, 'Rohan Gupta',       'rohan.gupta@example.com',      'Delhi',      'India', '2025-01-15', '2025-01-16 18:05:00', 'delivered', 'netbanking',  799.00,  0.00, 0, '["groceries","weekly"]'),
+(1004, 504, 'Neha Verma',        'neha.verma@example.com',       'Bengaluru',  'India', '2025-01-18', NULL,                  'shipped',   'cod',        9999.99, 5.00,  1, '["electronics","premium"]'),
+(1005, 505, 'Kabir Singh',       'kabir.singh@example.com',      'Hyderabad',  'India', '2025-01-20', NULL,                  'placed',    'wallet',      349.00, NULL,  0, '["books"]'),
+(1006, 506, 'Isha Nair',         'isha.nair@example.com',        'Chennai',    'India', '2025-01-22', '2025-01-25 09:10:00', 'delivered', 'upi',         459.75,  15.00,0, '["beauty","clearance"]'),
+(1007, 507, 'Aman Jain',         'aman.jain@example.com',        'Jaipur',     'India', '2025-01-25', NULL,                  'cancelled', 'card',       1299.00, 0.00,  0, '["fashion","returns"]'),
+(1008, 508, 'Diya Patel',        'diya.patel@example.com',       'Ahmedabad',  'India', '2025-01-28', NULL,                  'processing','upi',        219.00,  NULL,  0, '["stationery"]'),
+(1009, 509, 'Arjun Kulkarni',    'arjun.kulkarni@example.com',   'Nagpur',     'India', '2025-02-01', '2025-02-03 20:00:00', 'delivered', 'netbanking', 5499.00, 20.00,1, '["appliances","festival"]'),
+(1010, 510, 'Sara Khan',         'sara.khan@example.com',        'Lucknow',    'India', '2025-02-03', NULL,                  'shipped',   'cod',        899.00,  5.00,  0, '["toys"]'),
+(1011, 511, 'Vikram Rao',        'vikram.rao@example.com',       'Kochi',      'India', '2025-02-05', NULL,                  'returned',  'wallet',     1899.00, NULL,  0, '["fashion","exchange"]'),
+(1012, 512, 'Ananya Das',        'ananya.das@example.com',       'Kolkata',    'India', '2025-02-07', '2025-02-08 11:45:00', 'delivered', 'card',       299.00,  0.00,  0, '["grocery"]'),
+(1013, 513, 'Harsh Vardhan',     'harsh.vardhan@example.com',    'Indore',     'India', '2025-02-10', NULL,                  'placed',    'upi',        10499.00,10.00,1, '["electronics","gaming"]'),
+(1014, 514, 'Meera Iyer',        'meera.iyer@example.com',       'Coimbatore', 'India', '2025-02-11', '2025-02-12 16:00:00', 'delivered', 'netbanking',  649.00,  NULL,  0, '["kitchen"]'),
+(1015, 515, 'Ritik Chopra',      'ritik.chopra@example.com',     'Bhopal',     'India', '2025-02-12', NULL,                  'shipped',   'card',       749.00,  2.50,  0, '["sports"]'),
+(1016, 516, 'Sneha Reddy',       'sneha.reddy@example.com',      'Visakhapatnam','India','2025-02-14',NULL,                 'processing','wallet',    159.00,  NULL,  0, '["stationery","office"]'),
+(1017, 517, 'Yash Thakur',       'yash.thakur@example.com',      'Surat',      'India', '2025-02-15', '2025-02-17 10:20:00', 'delivered', 'upi',        2050.00, 25.00, 1, '["fashion","clearance"]'),
+(1018, 518, 'Pooja Joshi',       'pooja.joshi@example.com',      'Noida',      'India', '2025-02-16', NULL,                  'cancelled', 'cod',        499.00,  NULL,  0, '["home-decor"]'),
+(1019, 519, 'Rahul Malhotra',    'rahul.malhotra@example.com',   'Gurugram',   'India', '2025-02-18', '2025-02-19 19:30:00', 'delivered', 'card',       3200.00, 12.50, 0, '["books","gift"]'),
+(1020, 520, 'Zara Ahmed',        'zara.ahmed@example.com',       'Thane',      'India', '2025-02-20', NULL,                  'placed',    'netbanking',  89.00,   0.00,  0, '["add-on","small"]');
+
+-- Quick sanity checks (optional to run)
+-- SELECT COUNT(*) AS rows_inserted FROM orders;
+-- SELECT DISTINCT status FROM orders;
+-- SELECT order_id, customer_name, total_amount, discount_pct, (total_amount * (1 - IFNULL(discount_pct,0)/100)) AS net_amount FROM orders;
+
+
+
+-- Use the database created earlier
+-- USE training_db;
+
+-- ============================================================
+-- 10 SELECT + WHERE Exercises (beginner → advanced) with answers
+-- Table used: training_db.orders  (created in previous step)
+-- Constraints: Avoid other clauses (no JOIN/GROUP/ORDER/LIMIT, etc.)
+-- ============================================================
+
+/* ------------------------------------------------------------
+Exercise 1 (Beginner): 
+Select a few columns for all orders that are exactly 'delivered'.
+Goal: Basic equality filter on an ENUM column.
+------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, status
+FROM orders
+WHERE status = 'delivered';
+
+
+/* ------------------------------------------------------------
+Exercise 2 (Beginner): 
+Find orders where total_amount is greater than 2000.
+Goal: Numeric comparison filter.
+------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, total_amount
+FROM orders
+WHERE total_amount > 2000.00;
+
+
+/* ------------------------------------------------------------
+Exercise 3 (Beginner→Intermediate):
+Return orders placed between '2025-02-01' and '2025-02-15' (inclusive).
+Goal: Range filtering using BETWEEN on a DATE column.
+------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, order_date
+FROM orders
+WHERE order_date BETWEEN '2025-02-01' AND '2025-02-15';
+
+
+/* ------------------------------------------------------------
+Exercise 4 (Intermediate):
+Show orders placed by customers from any of these cities: Mumbai, Pune, Delhi.
+Goal: Set filtering using IN with a VARCHAR column.
+------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, city
+FROM orders
+WHERE city IN ('Mumbai','Pune','Delhi');
+
+
+/* ------------------------------------------------------------
+Exercise 5 (Intermediate):
+Find customers whose name starts with the letter 'A'.
+Goal: Pattern filtering using LIKE and wildcard %.
+(Note: utf8mb4_0900_ai_ci collation is case-insensitive.)
+------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name
+FROM orders
+WHERE customer_name LIKE 'A%';
+
+
+/* ------------------------------------------------------------
+Exercise 6 (Intermediate):
+List orders that do NOT have a delivery timestamp recorded yet.
+Goal: NULL filtering using IS NULL on a DATETIME column.
+------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, delivered_at
+FROM orders
+WHERE delivered_at IS NULL;
+
+
+/* ------------------------------------------------------------
+Exercise 7 (Intermediate→Advanced):
+Show delivered orders that were paid by either 'upi' or 'card'.
+Goal: Combine multiple conditions with AND + IN.
+------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, status, payment_method
+FROM orders
+WHERE status = 'delivered'
+  AND payment_method IN ('upi','card');
+
+
+/* ------------------------------------------------------------
+Exercise 8 (Advanced):
+Return orders that are NOT cancelled or returned, and where discount_pct is NULL.
+Goal: Negation with NOT IN, plus NULL check.
+------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, status, discount_pct
+FROM orders
+WHERE status NOT IN ('cancelled','returned')
+  AND discount_pct IS NULL;
+
+
+/* ------------------------------------------------------------
+Exercise 9 (Advanced):
+Find orders whose JSON 'tags' array contains the value "electronics".
+Goal: JSON filtering using JSON_CONTAINS on a JSON array column.
+Tip: To test membership of a scalar in a JSON array, pass the scalar as a JSON string.
+------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, tags
+FROM orders
+WHERE JSON_CONTAINS(tags, '"electronics"');
+
+
+/* ------------------------------------------------------------
+Exercise 10 (Advanced):
+Return orders where the computed net amount after discount exceeds 2000.
+Net amount = total_amount * (1 - IFNULL(discount_pct,0)/100).
+Goal: Filtering on a computed expression using IFNULL and arithmetic in WHERE.
+------------------------------------------------------------- */
+-- Solution:
+SELECT 
+  order_id, customer_name, total_amount, discount_pct,
+  (total_amount * (1 - IFNULL(discount_pct,0)/100)) AS net_amount
+FROM orders
+WHERE (total_amount * (1 - IFNULL(discount_pct,0)/100)) > 2000.00;
+
+
+
+-------------------------------------------------- SECTION 3 ------------------------------------------------------------------------------
+
+
+-- Use the same database/table as before
+-- USE training_db;
+-- Table: orders
+
+-- ===========================================================================
+-- 5 Scenario-based Machine-Test Exercises (SELECT + WHERE only) with Answers
+-- Constraint: No JOIN / GROUP BY / ORDER BY / LIMIT — only SELECT and WHERE.
+-- ===========================================================================
+
+
+/* -------------------------------------------------------------------------
+Scenario 1: Support Triage — Undelivered but Important
+"List orders that are still awaiting delivery (no delivered_at) AND
+(either marked priority OR total_amount > 5000), restricted to UP I/Card."
+Focus: NULL checks, boolean logic with AND/OR, IN.
+--------------------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, status, payment_method, total_amount, is_priority, delivered_at
+FROM orders
+WHERE delivered_at IS NULL
+  AND (is_priority = 1 OR total_amount > 5000)
+  AND payment_method IN ('upi','card');
+
+
+/* -------------------------------------------------------------------------
+Scenario 2: Marketing — High-Value Delivered in Feb 2025 with Specific Tags
+"Find delivered orders in Feb-2025 where the effective net amount
+(total_amount * (1 - IFNULL(discount_pct,0)/100)) >= 2000 and tags include
+either 'electronics' or 'appliances'."
+Focus: Date range, computed expression in WHERE, JSON membership.
+--------------------------------------------------------------------------- */
+-- Solution:
+SELECT
+  order_id, customer_name, order_date, total_amount, discount_pct, tags,
+  (total_amount * (1 - IFNULL(discount_pct,0)/100)) AS net_amount
+FROM orders
+WHERE status = 'delivered'
+  AND order_date BETWEEN '2025-02-01' AND '2025-02-28'
+  AND (
+        JSON_CONTAINS(tags, '"electronics"')
+        OR JSON_CONTAINS(tags, '"appliances"')
+      )
+  AND (total_amount * (1 - IFNULL(discount_pct,0)/100)) >= 2000;
+
+
+/* -------------------------------------------------------------------------
+Scenario 3: Risk Screen — COD or City+No-Discount (but not Cancelled/Returned)
+"Surface potentially risky orders: (payment_method = 'cod' AND total_amount > 800)
+OR (city IN ('Mumbai','Delhi') AND discount_pct IS NULL), while excluding
+cancelled/returned statuses."
+Focus: Parenthesized boolean logic, NOT IN, numeric + NULL conditions.
+--------------------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, city, status, payment_method, total_amount, discount_pct
+FROM orders
+WHERE status NOT IN ('cancelled','returned')
+  AND (
+        (payment_method = 'cod' AND total_amount > 800)
+        OR (city IN ('Mumbai','Delhi') AND discount_pct IS NULL)
+      );
+
+
+/* -------------------------------------------------------------------------
+Scenario 4: SLA Breach Watch — Old, Still Not Delivered, High-Volume Cities
+"Show orders from Mumbai/Pune/Delhi placed BEFORE 2025-02-10 that are still
+not delivered (delivered_at IS NULL)."
+Focus: Multi-value city filter, strict date comparison, NULL check.
+--------------------------------------------------------------------------- */
+-- Solution:
+SELECT order_id, customer_name, city, order_date, status, delivered_at
+FROM orders
+WHERE city IN ('Mumbai','Pune','Delhi')
+  AND order_date < '2025-02-10'
+  AND delivered_at IS NULL;
+
+
+/* -------------------------------------------------------------------------
+Scenario 5: Clearance Campaign — UPI/Wallet, Tagged 'clearance', Net in Band
+"Select orders tagged 'clearance' with payment_method in (upi, wallet) and
+net amount BETWEEN 100 and 500."
+Focus: JSON membership, IN, BETWEEN, computed expression in WHERE.
+--------------------------------------------------------------------------- */
+-- Solution:
+SELECT
+  order_id, customer_name, payment_method, total_amount, discount_pct, tags,
+  (total_amount * (1 - IFNULL(discount_pct,0)/100)) AS net_amount
+FROM orders
+WHERE (JSON_CONTAINS(tags, '"clearance"'))
+  AND payment_method IN ('upi','wallet')
+  AND (total_amount * (1 - IFNULL(discount_pct,0)/100)) BETWEEN 100 AND 500;
+
+
+-- =========================
+-- END OF PRACTICE
+-- =========================
